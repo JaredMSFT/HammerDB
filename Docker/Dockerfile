@@ -1,27 +1,29 @@
-FROM  docker.io/tpcorg/hammerdb:oracle as oracle
+FROM docker.io/library/ubuntu:24.04
+LABEL maintainer="Jared Meade"
 
-FROM  docker.io/tpcorg/hammerdb:mssqls
+# Update & upgrade apt and download basic utilities
+RUN apt update && apt upgrade -y && apt install -y && apt auto-remove -y \
+    && DEBIAN_FRONTEND=noninteractive \
+	&& apt install wget unzip gnupg apt-utils iputils-ping vim netcat-traditional libxft-dev libcairo2-dev xauth python3 -y
 
-# Install and configure IBM Db2 client libraries, 
-# You will need to pre-download IDB Db2 client libraries and place in the local folder
-# RUN mkdir -p db2_cli_odbc_driver/odbc_cli
-# ADD odbc_cli db2_cli_odbc_driver/odbc_cli/
-# RUN apt update && \
-#    echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections && \
-#    apt -y install libxml2 && \
-#    echo 'export DB2_CLI_DRIVER_INSTALL_PATH="/home/db2_cli_odbc_driver/odbc_cli/clidriver"' >> ~/.bashrc && \
-#    echo 'export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/home/db2_cli_odbc_driver/odbc_cli/clidriver/lib"' >> ~/.bashrc && \
-#    echo 'export LIBPATH="/home/db2_cli_odbc_driver/odbc_cli/clidriver/lib"' >> ~/.bashrc && \
-#    echo 'export PATH="$PATH:/home/db2_cli_odbc_driver/odbc_cli/clidriver/bin"' >> ~/.bashrc && \
-#    echo 'export PATH="$PATH:/home/db2_cli_odbc_driver/odbc_cli/clidriver/adm"' >>  ~/.bashrc
+RUN wget http://archive.ubuntu.com/ubuntu/pool/main/liba/libaio/libaio1t64_0.3.113-6build1_amd64.deb && \
+    apt install `pwd`/libaio1t64_0.3.113-6build1_amd64.deb && \
+    rm -rf  /var/lib/apt/lists/* `pwd`/libaio1t64_0.3.113-6build1_amd64.deb 
 
-COPY --from=oracle /home/instantclient_21_18 /home/instantclient_21_18
-ENV ORACLE_LIBRARY=/home/instantclient_21_18/libclntsh.so
-RUN echo 'export LD_LIBRARY_PATH=/home/instantclient_21_18/:$LD_LIBRARY_PATH'  >> ~/.bashrc  && \
-    ln -s /usr/lib/x86_64-linux-gnu/libaio.so.1t64 /usr/lib/x86_64-linux-gnu/libaio.so.1
+# Install configure HammerDB-v5.0
+ARG HAMMERDB_VERSION=5.0
 
-RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y libmariadb3 libpq-dev && \
-    wget -O /usr/lib/x86_64-linux-gnu/libmysqlclient.so.24  http://www.hammerdb.com/mysqllibs/libmysqlclient.so.24 && \
-    rm -rf /var/lib/apt/lists/*
+WORKDIR /tmp
 
+COPY ./Build/BawtBuild/Linux/x64/Release/Distribution/HammerDB-*-Prod-Linux.tar.gz .
+
+RUN tar -xvzf HammerDB-${HAMMERDB_VERSION}-Prod-Linux.tar.gz -C /home/ && \
+ln -s /home/HammerDB-${HAMMERDB_VERSION} /home/hammerdb
+
+# Install and configure PostgreSQL client libraries
+RUN apt update && apt install libpq-dev -y \
+&& rm -rf /var/lib/apt/lists/*
+
+WORKDIR /home/hammerdb
+
+CMD tail -f /dev/null

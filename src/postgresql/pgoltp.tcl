@@ -1629,13 +1629,13 @@ proc CreateUserDatabase { lda host port sslmode db tspace superuser superuser_pa
                 } else {
                     set is_db_owner [pg_result $is_db_owner_query -list]
                     if { $is_db_owner == f } {
-                         incr stmnt_count;
-                         set sql($stmnt_count) "ALTER DATABASE $db OWNER TO $user"
+                          incr stmnt_count;
+                          set sql($stmnt_count) "GRANT ALL PRIVILEGES ON SCHEMA public TO $user"
                     }
                 }
 
                 puts "Using existing empty Database $db for Schema build"
-                set sql($stmnt_count) "ALTER DATABASE \"$db\" OWNER TO \"$user\""
+                 set sql($stmnt_count) "GRANT ALL PRIVILEGES ON SCHEMA public TO \"$user\""
             } else {
                 puts "Database with tables $db exists"
                 error "Database $db exists but is not empty, specify a new or empty database name"
